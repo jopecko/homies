@@ -5,7 +5,7 @@
     ./bash
     ./comma.nix
     ./fzf.nix
-    ./git.nix
+    ./git
     ./htop.nix
     ./jq.nix
     ./neovim

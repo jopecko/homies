@@ -1,36 +1,23 @@
-#!/bin/bash
-# ~/.bashrc: executed by bash(1) for non-login shells.
-# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
-# for examples
+set -o notify    # report status of terminated background jobs immediately
+set -o noclobber # don't accidentally overwrite a file using redirection
+set -o ignoreeof # don't use ^D to exit
+#set -o nounset
+#set -o xtrace    # useful for debugging
 
-# Personal environment variables and startup programs should go in
-# ~/.bash_profile.  System wide environment variables and startup
-# programs are in /etc/profile.  System wide aliases and functions are
-# in /etc/bashrc.
+# https://coderwall.com/p/fasnya/add-git-branch-name-to-bash-prompt
+__git_ps1() {
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/ (\1)/'
+}
 
-# if not running interactively, don't do anything
-case $- in
-	*i*) ;;
-	*) return;;
-esac
-
-if [ -f "/etc/bashrc" ] ; then
-	# shellcheck source=/dev/null
-	source /etc/bashrc
+# prompt coloring
+if [ $(/usr/bin/whoami) = "root" ]; then
+    # root has a red prompt
+    export PS1="\[\033[0;31m\]\u@\h \w \$ \[\033\0m\]"
+else
+    branch='$(__git_ps1)'
+    export PS1="\[\033[01;31m\]\h\[\033[01;33m\]:\W${branch} \[\033[01;36m\]\$\[\033[00m\] "
 fi
 
-[ -f ~/.bash_aliases ] && source ~/.bash_aliases
-[ -f ~/.bash_functions ] && source ~/.bash_functions
-[ -f ~/.bash_completions ] && source ~/.bash_completions
-
-# enable programmable completion features (you don't need to enable
-# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
-# sources /etc/bash.bashrc).
-if [ -f /etc/bash_completion ] && ! shopt -oq posix; then
-    . /etc/bash_completion
-fi
-
-[ -f /etc/bash.bashrc ] && . /etc/bash.bashrc
 [ -f $HOME/.java_profile ] && . $HOME/.java_profile
 [ -f $HOME/.env_vars ] && . $HOME/.env_vars # machine-dependent env vars
 
@@ -38,7 +25,7 @@ if [ -f ~/.env ]; then
   . ~/.env
 fi
 
-for file in $(ls ~/.bash); do
+[ -d "$HOME/.bash" ] && for file in $(ls ~/.bash); do
   . ~/.bash/$file
 done
 

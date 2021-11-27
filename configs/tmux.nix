@@ -86,7 +86,7 @@ in
       #keyMode = "vi";
       plugins = with pkgs; [
         {
-          plugin = tmuxPlugins.mkDerivation {
+          plugin = tmuxPlugins.mkTmuxPlugin {
             pluginName = "scroll_copy_mode";
             version = "aa59077";
             src = pkgs.fetchFromGitHub {

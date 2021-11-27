@@ -127,7 +127,6 @@ in
       viAlias = true;
       vimAlias = true;
       withNodeJs = true;
-      withPython = true;
       withPython3 = true;
       plugins = with pkgs.vimPlugins; with pkgs.vimUtils; [
         # Sensible defaults for Vim.
