@@ -33,6 +33,9 @@ in {
       allowUnfree = true;
       allowBroken = false;
     };
+    overlays = [
+      (import ./overlays/coc-nvim)
+    ];
   };
 
   home = {

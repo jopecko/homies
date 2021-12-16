@@ -142,6 +142,13 @@ in
             remote = "green";
           };
           diff = {
+            whitespace = "reverse red";
+            meta = "yellow bold";
+            frag = "magenta bold";
+            old = "red bold";
+            new = "green bold";
+          };
+          status = {
             added = "yellow";
             changed = "green";
             untracked = "cyan";
@@ -161,11 +168,11 @@ in
           indentHeuristic = true;
           renames = "copies";
         };
+        branch.autosetuprebase = "always";
         help.autocorrect = 1;
-        pull.rebase = true;
         format.pretty = "%C(yellow)%h%Creset %s %C(red)(%cr)%Creset";
         push = {
-          default = "simple";
+          default = "tracking";
           followTags = true;
         };
         status.showStash = true;
@@ -177,9 +184,11 @@ in
           tool = "opendiff";
           summary = true;
           commit = "no";
-          ff = "no";
+          #ff = "no";
           log = true;
+          conflictstyle = "diff3";
         };
+        init.defaultBranch = "main";
       };
       ignores = [ (builtins.readFile ./ignore) ];
       includes = [{ path = "${gitalias}/gitalias.txt"; }];

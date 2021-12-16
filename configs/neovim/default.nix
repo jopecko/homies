@@ -1,213 +1,95 @@
 { config, lib, pkgs, ... }:
 
-with pkgs;
 with lib;
 let
   cfg = config.homies.configs.neovim;
+
+  custom-plugins = pkgs.callPackage ./custom-plugins.nix {
+    inherit (pkgs.vimUtils) buildVimPlugin;
+  };
+
+  plugins = pkgs.vimPlugins // custom-plugins;
+
+  overriddenPlugins = with pkgs; [ ];
+
+  #myVimPlugins = with plugins; [
+  myVimPlugins = with plugins; [
+    asyncrun-vim # run async commands, show result in quickfix window
+    #coc-nvim                # LSP client + autocompletion plugin
+    pkgs.coc-nvim-fixed # LSP client + autocompletion plugin
+    #coc-metals              # Scala LSP client for CoC
+    coc-yank # yank plugin for CoC
+    ctrlsf-vim # edit file in place after searching with ripgrep
+    dhall-vim # Syntax highlighting for Dhall lang
+    fzf-hoogle # search hoogle with fzf
+    fzf-vim # fuzzy finder
+    ghcid # ghcid for Haskell
+    lightline-vim # configurable status line (can be used by coc)
+    material-vim # modern theme with true colors support
+    multiple-cursors # Multiple cursors selection, etc
+    neomake # run programs asynchronously and highlight errors
+    nerdcommenter # code commenter
+    nerdtree # tree explorer
+    nerdtree-git-plugin # shows files git status on the NerdTree
+    quickfix-reflector-vim # make modifications right in the quickfix window
+    rainbow_parentheses-vim # for nested parentheses
+    tender-vim # a clean dark theme
+    vim-airline # bottom status bar
+    vim-airline-themes
+    #vim-css-color           # preview css colors
+    vim-devicons # dev icons shown in the tree explorer
+    vim-easy-align # alignment plugin
+    vim-easymotion # highlights keys to move quickly
+    #vim-fish # fish shell highlighting
+    vim-fugitive # git plugin
+    vim-gtfo # go to terminal or file manager
+    vim-mergetool # git mergetool for nvim
+    vim-nix # nix support (highlighting, etc)
+    vim-repeat # repeat plugin commands with (.)
+    vim-ripgrep # blazing fast search using ripgrep
+    vim-scala # scala plugin
+    vim-surround # quickly edit surroundings (brackets, html tags, etc)
+    vim-tmux # syntax highlighting for tmux conf file and more
+    vim-which-key # display possible keybindings of the command you type.
+  ] ++ overriddenPlugins;
+
+  baseConfig = builtins.readFile ./config.vim;
+  cocConfig = builtins.readFile ./coc.vim;
+  cocSettings = builtins.toJSON (import ./coc-settings.nix);
+  pluginsConfig = builtins.readFile ./plugins.vim;
+  vimConfig = baseConfig + pluginsConfig + cocConfig;
+
+  # neovim-5 nightly stuff
+  neovim-5 = pkgs.callPackage ./dev/nightly.nix { };
+  nvim5-config = builtins.readFile ./dev/metals.vim;
+  new-plugins = pkgs.callPackage ./dev/plugins.nix {
+    inherit (pkgs.vimUtils) buildVimPluginFrom2Nix;
+    inherit (pkgs) fetchFromGitHub;
+  };
+  nvim5-plugins = with new-plugins; [
+    nvim-metals
+  ];
 in
 {
   options.homies.configs.neovim = {
     enable = mkEnableOption "neovim configuration";
-
-    colorScheme = {
-      termdebugBreakpointBackground = mkOption {
-        default = "2B2B2B";
-        description = "Define the background color for termdebug's current line.";
-        example = "FFFFF";
-        type = types.str;
-      };
-
-      termdebugBreakpointForeground = mkOption {
-        default = "2B2B2B";
-        description = "Define the foreground color for termdebug's current line.";
-        example = "FFFFF";
-        type = types.str;
-      };
-
-      termdebugProgramCounter = mkOption {
-        default = cfg.colorScheme.termdebugBreakpointBackground;
-        description = "Define the background color for termdebug's gutter breakpoint indicator.";
-        example = "FFFFF";
-        type = types.str;
-      };
-    };
   };
 
   config = mkIf cfg.enable {
-    home = {
-      # Make binaries expected by the Neovim configuration available
-      packages = with pkgs; [
-        gawk
-        nixpkgs-fmt
-        universal-ctags
-        gdb
-        ripgrep
-      ];
-
-      sessionVariables."EDITOR" = "${config.programs.neovim.finalPackage}/bin/nvim";
-    };
-
     programs.neovim = {
       enable = true;
-      extraConfig = with config.homies.profiles.common.colorScheme; with cfg.colorScheme; ''
-        " Define color variables
-        let s:black = '#${black}'
-        let s:c_black = 0
-        let s:red = '#${red}'
-        let s:c_red = 1
-        let s:green = '#${green}'
-        let s:c_green = 2
-        let s:yellow = '#${yellow}'
-        let s:c_yellow = 3
-        let s:blue = '#${blue}'
-        let s:c_blue = 4
-        let s:magenta = '#${magenta}'
-        let s:c_magenta = 5
-        let s:cyan = '#${cyan}'
-        let s:c_cyan = 6
-        let s:white = '#${white}'
-        let s:c_white = 7
-        let s:bright_black = '#${brightBlack}'
-        let s:c_bright_black = 8
-        let s:bright_red = '#${brightRed}'
-        let s:c_bright_red = 9
-        let s:bright_green = '#${brightGreen}'
-        let s:c_bright_green = 10
-        let s:bright_yellow = '#${brightYellow}'
-        let s:c_bright_yellow = 11
-        let s:bright_blue = '#${brightBlue}'
-        let s:c_bright_blue = 12
-        let s:bright_magenta = '#${brightMagenta}'
-        let s:c_bright_magenta = 13
-        let s:bright_cyan = '#${brightCyan}'
-        let s:c_bright_cyan = 14
-        let s:bright_white = '#${brightWhite}'
-        let s:c_bright_white = 15
-
-        ${builtins.readFile ./config.vim}
-
-        " Change backup, swap and undo directory. If a path ends in '//' then the file name
-        " is built from the entire path. No more issues between projects.
-        call MaybeMkdir('${config.xdg.cacheHome}/nvim/swap/')
-        set directory=${config.xdg.cacheHome}/nvim/swap//
-
-        call MaybeMkdir('${config.xdg.cacheHome}/nvim/backup/')
-        set backupdir=${config.xdg.cacheHome}/nvim/backup//
-
-        if exists('+undofile')
-          call MaybeMkdir('${config.xdg.cacheHome}/nvim/undo/')
-          set undodir=${config.xdg.cacheHome}/nvim/undo//
-        end
-
-        if exists('+shada')
-          " Change SHAred DAta path.
-          set shada+=n${config.xdg.cacheHome}/nvim/shada
-        else
-          " Change viminfo path.
-          set viminfo+=n${config.xdg.cacheHome}/nvim/viminfo
-        endif
-
-        " Save the `.lvimrc` persistence file in the cache folder.
-        let g:localvimrc_persistence_file = '${config.xdg.cacheHome}/nvim/lvimrc_persistence'
-
-        " Set the colour of the colour column (used to highlight where lines should wrap).
-        hi ColorColumn guibg=#${brightBlack}
-
-        " Set the background colour.
-        hi Normal guibg=#${background}
-
-        " Lightline won't colour the single character between two statuslines when there is a
-        " vertical split, this will.
-        hi StatusLine gui=NONE guifg=#${background} guibg=#${background}
-
-        " Set the colour of the current debugger line and breakpoints in gutter.
-        hi debugPC guibg=#${termdebugProgramCounter}
-        hi debugBreakpoint guifg=#${termdebugBreakpointForeground} guibg=#${termdebugBreakpointBackground}
-      '';
+      extraConfig = vimConfig;
+      #package      = neovim-5;
+      plugins = myVimPlugins;
       viAlias = true;
       vimAlias = true;
-      withNodeJs = true;
-      withPython3 = true;
-      plugins = with pkgs.vimPlugins; with pkgs.vimUtils; [
-        # Sensible defaults for Vim.
-        vim-sensible
-        # Polyglot adds a bunch of syntax handling for different languages and tools, check if
-        # new languages are included before adding them manually.
-        vim-polyglot
-        # Rust (included in Polyglot, but explicitly disabled so that we can use newer versions).
-        rust-vim
-        # Pandoc
-        vim-pandoc
-        vim-pandoc-syntax
-        # Generate ctags for projects.
-        vim-gutentags
-        # Auto-adds `end` where appropriate.
-        vim-endwise
-        # Autocompletion/linting/fixing.
-        ale
-        deoplete-nvim
-        lightline-ale
-        # Add operator to comment out lines.
-        vim-commentary
-        # Improvements to netrw.
-        vim-vinegar
-        # Show git changes in the sign column
-        vim-signify
-        # Git wrappers
-        vim-fugitive
-        vim-rhubarb
-        fugitive-gitlab-vim
-        # Async build and test dispatcher
-        vim-dispatch
-        # Helper functions for unix commands.
-        vim-eunuch
-        # Easy navigation between vim splits and tmux panes.
-        vim-tmux-navigator
-        # Focus events for tmux.
-        vim-tmux-focus-events
-        # Fuzzy file search.
-        fzfWrapper
-        fzf-vim
-        # Statusline
-        lightline-vim
-        # Show marks in sign column.
-        vim-signature
-        vim-sneak
-        # Adds `s` motion for matching any two characters.
-        vim-sneak
-        # Improve `.` (repeat) for plugin maps.
-        vim-repeat
-        # Terminal utilities.
-        split-term-vim
-        # Handy bracket matchings.
-        vim-unimpaired
-        # Commands for interactig with surroundings ("", '', {}, etc).
-        vim-surround
-        # Multi-file search (`Ack`)
-        ferret
-        # Enhanced `%` functionality.
-        matchit-zip
-        # Look for project specific `.lvimrc` files.
-        vim-localvimrc
-        # Text filtering and alignment.
-        tabular
-        # Search/substitution/abbreviation of word variations.
-        vim-abolish
-        # Syntax highlighting for HOCON
-        # vim-hocon
-        # Rich syntax highlighting for disassembled SPIR-V (and automatic disassembly)
-        # vim-spirv
-        # Colour scheme
-        # vim-hybrid
-        # Clipboard sync between Vim and tmux.
-        # vim-tmux-clipboard
-        # Switch to absolute line numbers for buffers that aren't focused.
-        # vim-numbertoggle
-        # Improved incremental search - hides search highlighting after moving cursor.
-        # is-vim
-        # Visualize the undo tree.
-        # vim-mundo
-      ];
+      vimdiffAlias = true;
+      withNodeJs = true; # for coc.nvim
+      withPython3 = true; # for plugins
+    };
+
+    xdg.configFile = {
+      "nvim/coc-settings.json".text = cocSettings;
     };
   };
 }

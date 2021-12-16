@@ -115,6 +115,7 @@ fabric.properties
 
 .ensime_cache
 
-.metals
-.bloop
-project/metals.sbt
+.metals/
+.bloop/
+.ammonite/
+metals.sbt
