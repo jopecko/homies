@@ -49,9 +49,9 @@
   vim-ripgrep = buildVimPlugin {
     name = "vim-ripgrep";
     src = builtins.fetchTarball {
-      name   = "RipGrep-v1.0.2";
-      url    = "https://github.com/jremmen/vim-ripgrep/archive/v1.0.2.tar.gz";
-      sha256 = "1by56rflr0bmnjvcvaa9r228zyrmxwfkzkclxvdfscm7l7n7jnmh";
+      name   = "RipGrep-v1.0.3";
+      url    = "https://github.com/jremmen/vim-ripgrep/archive/v1.0.3.tar.gz";
+      sha256 = "0vzdi1q6xh440mvlgsi08d6py8n7ac2yhgixpcs74f4p9160zx1s";
     };
   };
 }
